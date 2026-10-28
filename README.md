@@ -64,6 +64,8 @@ module "kubeadm" {
 
 Without `control_plane_endpoint`, the cluster uses the first control plane's address, and the others can't take over if it goes down.
 
+The first control plane by name runs `kubeadm init`. To add a control plane later whose name sorts first, set `first_control_plane` to the one that started the cluster, or `kubeadm init` would run on the new one.
+
 For hosts created in the same plan, pass host objects with the host key you generated, so Conn3x checks it without a known_hosts entry:
 
 ```hcl
@@ -109,7 +111,9 @@ Then, on the first control plane:
 
 Then the other control planes join with `--control-plane`, and the workers join, each once, until `/etc/kubernetes/kubelet.conf` exists. Node names are the names you gave, such as `cp1` and `w1`.
 
-Adding a node later works the same way. A change to the set of nodes creates a fresh token and uploads the certificates again before the new nodes join, since kubeadm deletes them after two hours.
+Adding a node later works the same way. A change to the set of nodes creates a fresh token and uploads the certificates again before the new nodes join, since kubeadm deletes them after two hours. If a join fails and you retry more than two hours later, run `conn3x apply -replace='module.kubeadm.conn3x_command.kubeadm_first__join_token["FIRST"]'`, with your first control plane's name, to issue a fresh token first.
+
+Neither the token nor the certificate key reaches state: what `kubeadm init` and `kubeadm token create` print is discarded.
 
 Before the circuit runs, the `conn3x_host` data source reads each host's distribution over SSH. On Debian and Ubuntu it picks the apt suite for containerd from the release: Ubuntu 22.04, 24.04 and 26.04, and Debian 12 and 13. Another release fails the plan.
 
@@ -128,7 +132,8 @@ Deleting a node from the map leaves it in the cluster. Drain it and run `kubectl
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
 | `control_planes` | any | Required | Control plane nodes, by name. Each value is an address, such as `"203.0.113.10"`, or a host object such as `{ address = "203.0.113.10", host_key = "ssh-ed25519 AAAA..." }`. A host object can also set `user`, `port`, `private_key_file` and `jump_hosts`. Names become node names. The first name in sorted order runs `kubeadm init`. |
-| `workers` | any | `{}` | Worker nodes, by name, in the same form. |
+| `workers` | any | `{}` | Worker nodes, by name, in the same form. A name can't be both. |
+| `first_control_plane` | string | `null` | Control plane that runs `kubeadm init`. When null, the first name in sorted order. Keep it the same for the life of the cluster. |
 | `join_token` | string, ephemeral | Required | Bootstrap token, such as from `kubeadm token generate`. |
 | `certificate_key` | string, ephemeral | Required | 64 hex characters, such as from `kubeadm certs certificate-key`. |
 | `kubernetes_version` | string | `"1.37"` | Kubernetes minor version, from 1.31 on. Nodes get its newest patch release. |

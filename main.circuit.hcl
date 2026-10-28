@@ -17,7 +17,7 @@ locals {
   nodes = merge(var.control_planes, var.workers)
 
   # The first control plane by name runs kubeadm init. The others join it.
-  first    = sort(keys(var.control_planes))[0]
+  first    = coalesce(var.first_control_plane, sort(keys(var.control_planes))[0])
   endpoint = coalesce(var.control_plane_endpoint, "${try(var.control_planes[local.first].address, var.control_planes[local.first])}:6443")
   admin    = "--kubeconfig /etc/kubernetes/admin.conf"
 
@@ -47,7 +47,7 @@ locals {
   # EL10 images ship it in kernel-modules-extra, which they don't install.
   # A container can't load modules, so a module its host loaded counts.
   br_netfilter = {
-    command = "dnf -y install \"kernel-modules-extra-$(uname -r)\""
+    command = "command -v dnf >/dev/null || { echo 'br_netfilter is missing and this host has no dnf to install kernel-modules-extra' >&2; exit 1; }; dnf -y install \"kernel-modules-extra-$(uname -r)\""
     unless  = "test -d /sys/module/br_netfilter || modprobe -n br_netfilter"
   }
 
@@ -239,7 +239,7 @@ circuit "kubeadm_first" {
 
   step "init" {
     command {
-      command = "kubeadm init --config /etc/kubernetes/kubeadm.yaml --upload-certs --ignore-preflight-errors=${join(",", concat(["Swap"], var.ignore_preflight_errors))}"
+      command = "kubeadm init --config /etc/kubernetes/kubeadm.yaml --upload-certs --ignore-preflight-errors=${join(",", concat(["Swap"], var.ignore_preflight_errors))} >/dev/null"
       creates = "/etc/kubernetes/admin.conf"
     }
   }
@@ -247,14 +247,14 @@ circuit "kubeadm_first" {
   step "cni" {
     for_each = toset(compact([var.cni_manifest_url]))
     command {
-      command  = "kubectl ${local.admin} apply -f ${item.value}"
+      command  = "kubectl ${local.admin} apply -f '${item.value}'"
       triggers = { url = item.value }
     }
   }
 
   step "join_token" {
     command {
-      command  = ". ${local.join_env} && { kubeadm token delete \"$TOKEN\" ${local.admin} >/dev/null 2>&1 || true; } && kubeadm token create \"$TOKEN\" --ttl 2h ${local.admin} && kubeadm init phase upload-certs --upload-certs --config /etc/kubernetes/kubeadm.yaml"
+      command  = ". ${local.join_env} && { kubeadm token delete \"$TOKEN\" ${local.admin} >/dev/null 2>&1 || true; } && kubeadm token create \"$TOKEN\" --ttl 2h ${local.admin} >/dev/null && kubeadm init phase upload-certs --upload-certs --config /etc/kubernetes/kubeadm.yaml >/dev/null"
       triggers = { nodes = join(",", sort(keys(local.nodes))) }
     }
   }

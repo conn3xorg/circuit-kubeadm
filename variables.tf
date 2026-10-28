@@ -11,7 +11,23 @@ variable "control_planes" {
 variable "workers" {
   type        = any
   default     = {}
-  description = "Worker nodes, by name, in the same form as control_planes."
+  description = "Worker nodes, by name, in the same form as control_planes. A name can't be both a control plane and a worker."
+
+  validation {
+    condition     = length(setintersection(keys(var.control_planes), keys(var.workers))) == 0
+    error_message = "A name can't be both a control plane and a worker."
+  }
+}
+
+variable "first_control_plane" {
+  type        = string
+  default     = null
+  description = "Control plane that runs kubeadm init. When null, the first name in sorted order. Keep it the same for the life of the cluster: adding a control plane whose name sorts first would otherwise run kubeadm init on it."
+
+  validation {
+    condition     = var.first_control_plane == null || contains(keys(var.control_planes), coalesce(var.first_control_plane, "-"))
+    error_message = "first_control_plane must be one of the names in control_planes."
+  }
 }
 
 variable "join_token" {
@@ -100,6 +116,11 @@ variable "cni_manifest_url" {
   type        = string
   default     = "https://github.com/flannel-io/flannel/releases/download/v0.28.10/kube-flannel.yml"
   description = "Manifest of the pod network to apply after kubeadm init. Set null to install one yourself, as with Cilium's CLI or a Helm chart."
+
+  validation {
+    condition     = var.cni_manifest_url == null || can(regex("^https://[^'\\s]+$", coalesce(var.cni_manifest_url, "-")))
+    error_message = "cni_manifest_url must be an https:// URL without quotes or spaces."
+  }
 }
 
 variable "ignore_preflight_errors" {

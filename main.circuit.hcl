@@ -244,11 +244,27 @@ circuit "kubeadm_first" {
     }
   }
 
+  step "curl" {
+    package {
+      name = "curl"
+    }
+  }
+
+  # Fetched first, so only the bytes the checksum names reach the cluster.
+  step "cni_manifest" {
+    for_each = toset(compact([var.cni_manifest_url]))
+    download {
+      url    = item.value
+      dest   = "/etc/conn3x/kubeadm/cni.yaml"
+      sha256 = var.cni_manifest_sha256
+    }
+  }
+
   step "cni" {
     for_each = toset(compact([var.cni_manifest_url]))
     command {
-      command  = "kubectl ${local.admin} apply -f '${item.value}'"
-      triggers = { url = item.value }
+      command  = "kubectl ${local.admin} apply -f /etc/conn3x/kubeadm/cni.yaml"
+      triggers = { manifest = conn3x_download.kubeadm_first__cni_manifest["${each.key}/${item.key}"].revision }
     }
   }
 

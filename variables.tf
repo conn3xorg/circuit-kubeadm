@@ -123,6 +123,17 @@ variable "cni_manifest_url" {
   }
 }
 
+variable "cni_manifest_sha256" {
+  type        = string
+  default     = "393bdbce53eb50c8eb97dd513b218518b7d6e7985dc7b889be956e112a711084"
+  description = "SHA-256 of the manifest at cni_manifest_url. The default is Flannel v0.28.10's, so set it whenever you change the URL."
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{64}$", var.cni_manifest_sha256))
+    error_message = "cni_manifest_sha256 is 64 lowercase hex digits."
+  }
+}
+
 variable "ignore_preflight_errors" {
   type        = list(string)
   default     = []

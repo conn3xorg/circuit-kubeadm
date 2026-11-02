@@ -8,7 +8,7 @@ This is the work a Terraform-plus-Ansible setup usually splits in two: Terraform
 
 ```hcl
 module "kubeadm" {
-  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.1.0"
+  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.1.1"
 
   control_planes = { cp1 = "203.0.113.10" }
   workers = {
@@ -48,7 +48,7 @@ Give three control planes, and put a load balancer or a virtual IP in front of t
 
 ```hcl
 module "kubeadm" {
-  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.1.0"
+  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.1.1"
 
   control_planes = {
     cp1 = "10.0.0.10"
@@ -90,7 +90,7 @@ kubectl get nodes
 
 ### Choosing a pod network
 
-The default `cni_manifest_url` is Flannel v0.28.10, which matches the default `pod_cidr`. For Calico, give its manifest and the pod network it expects. For Cilium, set `cni_manifest_url = null` and install it with its CLI or Helm chart once the control plane is up. The nodes show `NotReady` until a pod network runs.
+The default `cni_manifest_url` is Flannel v0.28.10, which matches the default `pod_cidr`. For Calico, give its manifest, its checksum as `cni_manifest_sha256`, and the pod network it expects. For Cilium, set `cni_manifest_url = null` and install it with its CLI or Helm chart once the control plane is up. The nodes show `NotReady` until a pod network runs.
 
 ## What it does
 
@@ -105,7 +105,7 @@ On every node, in order:
 Then, on the first control plane:
 
 6. Writes `/etc/kubernetes/kubeadm.yaml`, with the node name, the endpoint, the pod and service networks, the systemd cgroup driver, and `failSwapOn: false` so hosts with swap work. It holds the token and the certificate key, so it's write-only.
-7. Runs `kubeadm init` once, until `/etc/kubernetes/admin.conf` exists, and applies `cni_manifest_url`.
+7. Runs `kubeadm init` once, until `/etc/kubernetes/admin.conf` exists, and applies `cni_manifest_url` once its checksum matches.
 8. Creates the join token, valid for two hours, and uploads the control plane certificates for the other control planes.
 9. Reads the hash of the cluster's CA, which the other nodes check the control plane against.
 
@@ -141,6 +141,7 @@ Deleting a node from the map leaves it in the cluster. Drain it and run `kubectl
 | `pod_cidr` | string | `"10.244.0.0/16"` | Pod network. |
 | `service_cidr` | string | `"10.96.0.0/12"` | Service network. |
 | `cni_manifest_url` | string | Flannel v0.28.10 | Pod network manifest to apply after `kubeadm init`, or null to install one yourself. |
+| `cni_manifest_sha256` | string | Flannel v0.28.10's | SHA-256 of that manifest, checked before it's applied. |
 | `ignore_preflight_errors` | list(string) | `[]` | kubeadm preflight checks to treat as warnings, such as `["SystemVerification"]`. |
 | `ssh_user` | string | `"root"` | User to log in as. |
 | `ssh_port` | number | `22` | SSH port. |

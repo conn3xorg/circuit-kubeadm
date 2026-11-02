@@ -123,7 +123,10 @@ jobs:
           conn3x apply -auto-approve
           conn3x plan -detailed-exitcode
       - name: Check both nodes are Ready
-        run: sudo podman exec kube-n1 kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready node --all --timeout=3m
+        run: |
+          sum=$(sed -n '/cni_manifest_sha256/,/^}/s/.*default *= *"\(.*\)"/\1/p' variables.tf)
+          echo "$sum  /etc/conn3x/kubeadm/cni.yaml" | sudo podman exec -i kube-n1 sha256sum -c -
+          sudo podman exec kube-n1 kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready node --all --timeout=3m
       - name: Clean up
         if: always()
         run: for n in 1 2; do NAME=kube-n$n examples/local/down.sh; done

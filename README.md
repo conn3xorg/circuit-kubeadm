@@ -1,5 +1,7 @@
 # circuit-kubeadm
 
+[![Conn3x grade](https://conn3x.org/circuits/kubeadm/grade.svg)](https://conn3x.org/circuits/kubeadm/grade)
+
 A Conn3x circuit that builds an upstream Kubernetes cluster with kubeadm: one or more control planes, and as many workers as you give it. It installs containerd and the Kubernetes packages from their official repositories, runs `kubeadm init` on the first control plane, applies a pod network, and joins every other node.
 
 This is the work a Terraform-plus-Ansible setup usually splits in two: Terraform makes the VMs and writes an inventory, then a playbook runs kubeadm and copies the join command from one host to the others. Here the VMs and the cluster go in one configuration. The join token and the CA hash pass between nodes inside the plan, and nothing waits on a `sleep 60`.

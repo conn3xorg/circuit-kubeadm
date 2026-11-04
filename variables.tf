@@ -138,4 +138,11 @@ variable "ignore_preflight_errors" {
   type        = list(string)
   default     = []
   description = "kubeadm preflight checks to treat as warnings, such as [\"SystemVerification\"]. Swap is always one, since the kubelet runs with failSwapOn false."
+
+  # They're joined into the kubeadm command line, so a space, quote or
+  # semicolon would change the command.
+  validation {
+    condition     = alltrue([for e in var.ignore_preflight_errors : can(regex("^[A-Za-z0-9.-]+$", e))])
+    error_message = "Each of ignore_preflight_errors is the name of a kubeadm preflight check, such as \"SystemVerification\", \"NumCPU\" or \"all\"."
+  }
 }

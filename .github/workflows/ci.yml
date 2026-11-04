@@ -111,7 +111,7 @@ jobs:
           CONTAINERFILE: ${{ github.workspace }}/conn3x/test/images/ubuntu2404/Containerfile
         run: |
           for n in 1 2; do
-            NAME=kube-n$n PORT=222$n examples/local/up.sh
+            CONTAINER_NAME=kube-n$n PORT=222$n examples/local/up.sh
             cat examples/local/known_hosts >> test/cluster/known_hosts
           done
           cp examples/local/id_ed25519 test/cluster/
@@ -129,4 +129,4 @@ jobs:
           sudo podman exec kube-n1 kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready node --all --timeout=3m
       - name: Clean up
         if: always()
-        run: for n in 1 2; do NAME=kube-n$n examples/local/down.sh; done
+        run: for n in 1 2; do CONTAINER_NAME=kube-n$n examples/local/down.sh; done

@@ -23,7 +23,7 @@ locals {
 
   # containerd.io comes from Docker's repository, which has one per
   # distribution. apt needs the release's codename.
-  docker_repo = { rocky = "rhel", almalinux = "rhel", rhel = "rhel", centos = "rhel", fedora = "fedora", ubuntu = "ubuntu", debian = "debian" }
+  docker_repo = { rocky = "rhel", almalinux = "rhel", rhel = "rhel", fedora = "fedora", ubuntu = "ubuntu", debian = "debian" }
   codename    = { "22.04" = "jammy", "24.04" = "noble", "26.04" = "resolute", "12" = "bookworm", "13" = "trixie" }
   k8s_repo    = "https://pkgs.k8s.io/core:/stable:/v${var.kubernetes_version}"
 

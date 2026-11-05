@@ -10,7 +10,7 @@ This is the work a Terraform-plus-Ansible setup usually splits in two: Terraform
 
 ```hcl
 module "kubeadm" {
-  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.1.2"
+  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.2.0"
 
   control_planes = { cp1 = "203.0.113.10" }
   workers = {
@@ -50,7 +50,7 @@ Give three control planes, and put a load balancer or a virtual IP in front of t
 
 ```hcl
 module "kubeadm" {
-  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.1.2"
+  source = "github.com/conn3xorg/circuit-kubeadm?ref=v0.2.0"
 
   control_planes = {
     cp1 = "10.0.0.10"

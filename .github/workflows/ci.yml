@@ -70,6 +70,8 @@ jobs:
           CONTAINERFILE: ${{ github.workspace }}/conn3x/test/images/${{ matrix.distro }}/Containerfile
           # Rootless Podman doesn't hand containers the cpuset cgroup the kubelet needs.
           PODMAN: sudo podman
+          # A fixed address, so the restart below keeps it like a rebooted host.
+          IP: 10.88.0.50
         run: ./up.sh
       - name: Apply, then plan again with no changes
         working-directory: examples/local
@@ -78,6 +80,38 @@ jobs:
           conn3x apply -auto-approve
           conn3x plan -detailed-exitcode
           sudo podman exec circuit-kubeadm kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready node --all --timeout=3m
+      # kubeadm init used the example's join token, so the cluster has it,
+      # but neither it nor the certificate key may be in state.
+      - name: Check the join token and certificate key stayed out of state
+        working-directory: examples/local
+        run: |
+          sudo podman exec circuit-kubeadm kubeadm token list --kubeconfig /etc/kubernetes/admin.conf | grep -q '^abcdef\.'
+          if grep -qE 'abcdef\.0123456789abcdef|0123456789abcdef|0{64}' terraform.tfstate; then
+            echo "The join token or certificate key is in terraform.tfstate." >&2
+            exit 1
+          fi
+      # Restarting the container boots systemd again, so this checks the
+      # kubelet brings the control plane back by itself, the API answers,
+      # the node is Ready again, and the plan has nothing to do.
+      - name: Restart the host, then check the cluster and the plan
+        working-directory: examples/local
+        run: |
+          sudo podman restart circuit-kubeadm
+          for _ in $(seq 60); do
+            case $(sudo podman exec circuit-kubeadm systemctl is-system-running 2>/dev/null) in running|degraded) break ;; esac
+            sleep 1
+          done
+          for _ in $(seq 180); do
+            sudo podman exec circuit-kubeadm kubectl --kubeconfig /etc/kubernetes/admin.conf get --raw /readyz >/dev/null 2>&1 && break
+            sleep 1
+          done
+          sudo podman exec circuit-kubeadm kubectl --kubeconfig /etc/kubernetes/admin.conf get --raw /readyz
+          sudo podman exec circuit-kubeadm kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready node --all --timeout=3m
+          conn3x plan -detailed-exitcode
+      - name: Show the kubelet and containerd logs
+        if: failure()
+        run: |
+          sudo podman exec circuit-kubeadm sh -c 'systemctl --no-pager status kubelet containerd; journalctl --no-pager -u kubelet -u containerd | tail -n 80; crictl --runtime-endpoint unix:///run/containerd/containerd.sock ps -a' || true
       - name: Clean up
         if: always()
         working-directory: examples/local

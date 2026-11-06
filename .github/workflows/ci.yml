@@ -106,6 +106,10 @@ jobs:
           sudo podman exec circuit-kubeadm kubectl --kubeconfig /etc/kubernetes/admin.conf get --raw /readyz
           sudo podman exec circuit-kubeadm kubectl --kubeconfig /etc/kubernetes/admin.conf wait --for=condition=Ready node --all --timeout=3m
           conn3x plan -detailed-exitcode
+      - name: Show the kubelet and containerd logs
+        if: failure()
+        run: |
+          sudo podman exec circuit-kubeadm sh -c 'systemctl --no-pager status kubelet containerd; journalctl --no-pager -u kubelet -u containerd | tail -n 80; crictl --runtime-endpoint unix:///run/containerd/containerd.sock ps -a' || true
       - name: Clean up
         if: always()
         working-directory: examples/local

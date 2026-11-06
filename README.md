@@ -165,6 +165,8 @@ Requires Conn3x v0.6.4 or later and systemd on each host, with outbound HTTPS to
 
 Rocky Linux 10, Fedora 45, Ubuntu 24.04 and Debian 13. CI applies [examples/local](examples/local) to each on amd64, checks that the second plan has no changes and that the node is Ready, and joins a worker to a control plane from [test/cluster](test/cluster).
 
+CI also checks the cluster holds the example's join token and that neither the token nor the certificate key is in `terraform.tfstate`. It then restarts the container, on a fixed address as a rebooted host keeps its own, and checks the API answers `/readyz`, the node is Ready again and the plan has no changes. Upgrades aren't tested, since the circuit doesn't run `kubeadm upgrade` yet.
+
 Also checked by hand on DigitalOcean: two control planes on Ubuntu 24.04 and Rocky Linux 10 with SELinux enforcing, a worker on Debian 13, and a second worker on Rocky Linux 9 added later, with Kubernetes 1.37.
 
 ## License

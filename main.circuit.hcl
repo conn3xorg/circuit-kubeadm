@@ -283,6 +283,7 @@ circuit "kubeadm_first" {
   }
 
   step "ca_hash" {
+    # conn3x-lint:ignore C3X101 reads the cluster CA's public key hash, which never changes for the cluster's life; its stdout is the value
     command {
       command = "openssl x509 -pubkey -noout -in /etc/kubernetes/pki/ca.crt | openssl pkey -pubin -outform der | sha256sum | cut -d' ' -f1"
     }
